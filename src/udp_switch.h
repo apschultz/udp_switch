@@ -25,37 +25,37 @@
 extern int debug;
 
 #define container_of(ptr, type, member) ({                      \
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
-        (type *)((char *)__mptr - offsetof(type,member));})
+		const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+		(type *)((char *)__mptr - offsetof(type,member));})
 
 #define ETHER_ADDR_LEN 6
 
 typedef struct ether_header {
-    uint8_t  ether_dhost[ETHER_ADDR_LEN];  /* destination eth addr */
-    uint8_t  ether_shost[ETHER_ADDR_LEN];  /* source eth addr    */
-    uint16_t ether_type;                   /* packet type ID field */
-        uint8_t  data[0];
+	uint8_t  ether_dhost[ETHER_ADDR_LEN];  /* destination eth addr */
+	uint8_t  ether_shost[ETHER_ADDR_LEN];  /* source eth addr    */
+	uint16_t ether_type;                   /* packet type ID field */
+		uint8_t  data[0];
 } __attribute__((packed)) ether_header;
 
 #define ETH_P_8021Q_NET  htons(0x8100)
 #define ETH_P_8021AD_NET htons(0x88A8)
 
 typedef struct vlan_header {
-    uint16_t vlan_tci;       /* vlan id/prio    */
-    uint16_t ether_type;     /* packet type ID field */
-        uint8_t  data[0];
+	uint16_t vlan_tci;       /* vlan id/prio    */
+	uint16_t ether_type;     /* packet type ID field */
+		uint8_t  data[0];
 } __attribute__((packed)) vlan_header;
 
 typedef struct tenant_entry {
-    uint32_t                tenant_id;
-    dlist                   client_list;
-    dlist_entry             global_dle;
+	uint32_t                tenant_id;
+	dlist                   client_list;
+	dlist_entry             global_dle;
 	uint32_t                refcount;
 } tenant_entry;
 
 static inline void tenant_entry_hold(tenant_entry *te)
 {
-        __atomic_add_fetch(&te->refcount, 1, __ATOMIC_SEQ_CST);
+		__atomic_add_fetch(&te->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void tenant_entry_release(tenant_entry *te)
 {
@@ -98,7 +98,7 @@ typedef struct udp_client {
 
 static inline void udp_client_hold(udp_client *cl)
 {
-    __atomic_add_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void udp_client_release(udp_client *cl)
 {

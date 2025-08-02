@@ -123,46 +123,46 @@ static inline void mac_reset_ctrs(mac_entry *me) {
 static size_t udp_client_to_str(udp_client *cl, char *buf, size_t buf_len) {
 	assert(buf_len >= UDPCLIENT_STR_LEN);
 
-    size_t len = 0;
+	size_t len = 0;
 
 	/* Add tenant prefix */
 	len += snprintf(buf + len, buf_len - len, "[tenant:%u] ", cl->tenant_id);
 	
-    /* Build "[IP]:port" into buf directly */
-    /* Add opening '[' */
-    if (len < buf_len - 1) buf[len++] = '[';
-    /* Write IP address */
-    size_t ip_space = (len < buf_len) ? buf_len - len : 0;
-    if (ip_space > 0) {
-        evutil_inet_ntop(cl->addr.ss_family,
+	/* Build "[IP]:port" into buf directly */
+	/* Add opening '[' */
+	if (len < buf_len - 1) buf[len++] = '[';
+	/* Write IP address */
+	size_t ip_space = (len < buf_len) ? buf_len - len : 0;
+	if (ip_space > 0) {
+		evutil_inet_ntop(cl->addr.ss_family,
 			(cl->addr.ss_family == AF_INET)
 				? (void *)&((struct sockaddr_in *)&cl->addr)->sin_addr
 				: (void *)&((struct sockaddr_in6 *)&cl->addr)->sin6_addr,
 			buf + len, ip_space);
-        size_t iplen = strnlen(buf + len, ip_space);
-        len += iplen;
-    }
-    /* Add closing ']' and ':' */
-    if (len < buf_len - 2) {
-        buf[len++] = ']';
-        buf[len++] = ':';
-    }
-    /* Write port */
-    int port = ntohs(
-        (cl->addr.ss_family == AF_INET)
-            ? ((struct sockaddr_in *)&cl->addr)->sin_port
-            : ((struct sockaddr_in6 *)&cl->addr)->sin6_port);
-    if (len < buf_len) {
-        int ret = snprintf(buf + len, buf_len - len, "%d", port);
-        if (ret > 0) {
-            size_t portlen = (size_t)ret;
-            len += (portlen < buf_len - len) ? portlen : buf_len - len;
-        }
-    }
-    /* Null-terminate if space */
-    if (len < buf_len) buf[len] = '\0';
-    else buf[buf_len - 1] = '\0';
-    return len;
+		size_t iplen = strnlen(buf + len, ip_space);
+		len += iplen;
+	}
+	/* Add closing ']' and ':' */
+	if (len < buf_len - 2) {
+		buf[len++] = ']';
+		buf[len++] = ':';
+	}
+	/* Write port */
+	int port = ntohs(
+		(cl->addr.ss_family == AF_INET)
+			? ((struct sockaddr_in *)&cl->addr)->sin_port
+			: ((struct sockaddr_in6 *)&cl->addr)->sin6_port);
+	if (len < buf_len) {
+		int ret = snprintf(buf + len, buf_len - len, "%d", port);
+		if (ret > 0) {
+			size_t portlen = (size_t)ret;
+			len += (portlen < buf_len - len) ? portlen : buf_len - len;
+		}
+	}
+	/* Null-terminate if space */
+	if (len < buf_len) buf[len] = '\0';
+	else buf[buf_len - 1] = '\0';
+	return len;
 }
 
 #define MACENTRY_STR_LEN (29) //MAC vlan VID
@@ -170,32 +170,32 @@ static size_t mac_entry_to_str(mac_entry *me, char *buf, size_t buf_len) {
 	assert(buf_len >= MACENTRY_STR_LEN);
 	return snprintf(buf, buf_len, 
 		"%02x:%02x:%02x:%02x:%02x:%02x vlan %u",
-        me->key.mac[0], me->key.mac[1], me->key.mac[2],
-        me->key.mac[3], me->key.mac[4], me->key.mac[5],
+		me->key.mac[0], me->key.mac[1], me->key.mac[2],
+		me->key.mac[3], me->key.mac[4], me->key.mac[5],
 		me->key.vlan_id); 
 }
 
 /* -- Logging Functions -- */
 static void log_client(udp_client *cl, const char *fmt, ...) {
-    char cl_str[UDPCLIENT_STR_LEN];
+	char cl_str[UDPCLIENT_STR_LEN];
 
-    udp_client_to_str(cl, cl_str, sizeof(cl_str));
+	udp_client_to_str(cl, cl_str, sizeof(cl_str));
 
 #if USE_PTHREAD
 	printf("[%s] %s ", thread_str, cl_str);
 #else
 	printf("%s ", cl_str);
 #endif
-    va_list ap; va_start(ap, fmt);
-    vprintf(fmt, ap);
-    va_end(ap);
-    printf("\n");
+	va_list ap; va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+	printf("\n");
 }
 
 static void _log_mac(mac_entry *me, udp_client *cl, const char *fmt, ...) {
-    char cl_str[UDPCLIENT_STR_LEN];
-    char me_str[MACENTRY_STR_LEN];
-    if (!cl) cl = me->client;
+	char cl_str[UDPCLIENT_STR_LEN];
+	char me_str[MACENTRY_STR_LEN];
+	if (!cl) cl = me->client;
 
 	udp_client_to_str(cl, cl_str, sizeof(cl_str));
 	mac_entry_to_str(me, me_str, sizeof(me_str));
@@ -205,17 +205,17 @@ static void _log_mac(mac_entry *me, udp_client *cl, const char *fmt, ...) {
 #else
 	printf("%s src %s ", cl_str, me_str);
 #endif
-    va_list ap; va_start(ap, fmt);
-    vprintf(fmt, ap);
-    va_end(ap);
-    printf("\n");
+	va_list ap; va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+	printf("\n");
 }
 #define LOG_MAC_IMPL(_me, _cl, _fmt, ...) \
-    _log_mac((_me), (_cl), (_fmt), ##__VA_ARGS__)
+	_log_mac((_me), (_cl), (_fmt), ##__VA_ARGS__)
 #define log_mac(_me, _fmt, ...) \
-    LOG_MAC_IMPL((_me), NULL, (_fmt), ##__VA_ARGS__)
+	LOG_MAC_IMPL((_me), NULL, (_fmt), ##__VA_ARGS__)
 #define log_mac_client(_me, _cl, _fmt, ...) \
-    LOG_MAC_IMPL((_me), (_cl), (_fmt), ##__VA_ARGS__)
+	LOG_MAC_IMPL((_me), (_cl), (_fmt), ##__VA_ARGS__)
 
 
 static tenant_entry *get_tenant(uint32_t tenant_id)
@@ -223,17 +223,17 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
 #if USE_PTHREAD
 	pthread_mutex_lock(&tenant_list_lock);
 #endif
-    for (dlist_entry *dle = tenant_list.head; dle; dle = dle->next) {
-        tenant_entry *te = container_of(dle, tenant_entry, global_dle);
-        if (te->tenant_id == tenant_id) {
+	for (dlist_entry *dle = tenant_list.head; dle; dle = dle->next) {
+		tenant_entry *te = container_of(dle, tenant_entry, global_dle);
+		if (te->tenant_id == tenant_id) {
 			tenant_entry_hold(te);
 #if USE_PTHREAD
 			pthread_mutex_unlock(&tenant_list_lock);
 #endif
 			return te;
 		}
-    }
-    tenant_entry *te = calloc(1, sizeof(*te));
+	}
+	tenant_entry *te = calloc(1, sizeof(*te));
 	if (!te) {
 #if USE_PTHREAD
 		pthread_mutex_unlock(&tenant_list_lock);
@@ -243,7 +243,7 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
 	if (debug > 2) {
 		printf("tenant_entry 0x%p allocated\n", te);
 	}
-    te->tenant_id = tenant_id;
+	te->tenant_id = tenant_id;
 	dlist_add(&tenant_list, &te->global_dle);
 	tenant_entry_hold(te); //For return
 	tenant_entry_hold(te); //For tenant_list
@@ -253,7 +253,7 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
 #else
 	printf("[tenant:%u] New tenant\n", tenant_id);
 #endif
-    return te;
+	return te;
 }
 
 static int remove_client_from_tenant(udp_client *cl)
@@ -282,23 +282,23 @@ static int remove_client_from_tenant(udp_client *cl)
 
 static udp_client *get_client(uint32_t tenant_id, const struct sockaddr *addr, socklen_t addrlen)
 {
-    udp_client *cl;
-    SAFE_HASH_FIND(hh, clients, addr, addrlen, cl);
-    if (cl) {
+	udp_client *cl;
+	SAFE_HASH_FIND(hh, clients, addr, addrlen, cl);
+	if (cl) {
 		return cl;
 	}
 	if (HASH_COUNT(clients) >= MAX_CLIENTS) {
 		return NULL;
 	}
-    cl = calloc(1, sizeof(*cl));
+	cl = calloc(1, sizeof(*cl));
 	if (!cl) {
 		return NULL;
 	}
 	if (debug > 2) {
 		printf("udp_client 0x%p allocated\n", cl);
 	}
-    memcpy(&cl->addr, addr, addrlen);
-    cl->addrlen = addrlen;
+	memcpy(&cl->addr, addr, addrlen);
+	cl->addrlen = addrlen;
 	
 	tenant_entry *te = get_tenant(tenant_id);
 	if (!te) {
@@ -309,7 +309,7 @@ static udp_client *get_client(uint32_t tenant_id, const struct sockaddr *addr, s
 	cl->tenant = te;
 	dlist_add(&te->client_list, &cl->tenant_dle);
 
-    SAFE_HASH_ADD_KEYPTR(hh, clients, &cl->addr, addrlen, cl);
+	SAFE_HASH_ADD_KEYPTR(hh, clients, &cl->addr, addrlen, cl);
 #if USE_PTHREAD
 	pthread_rwlock_init(&cl->vlan_list_lock, NULL);
 	pthread_mutex_init(&cl->mac_list_lock, NULL);
@@ -317,13 +317,13 @@ static udp_client *get_client(uint32_t tenant_id, const struct sockaddr *addr, s
 	tenant_entry_hold(te); //For cl->tenant
 	udp_client_hold(cl); //For te->client_list
 	udp_client_hold(cl); //For return
-    log_client(cl, "New client");
-    return cl;
+	log_client(cl, "New client");
+	return cl;
 }
 
 static vlan_entry *get_vlan(udp_client *cl, uint16_t vlan_id)
 {
-    vlan_entry *vl = NULL;
+	vlan_entry *vl = NULL;
 #if USE_PTHREAD
 	pthread_rwlock_wrlock(&cl->vlan_list_lock);
 #endif
@@ -452,23 +452,23 @@ int add_mac_to_client(udp_client *cl, mac_entry *me)
 }
 
 static mac_entry *get_mac(const uint8_t *mac,
-                         udp_client *client,
+						 udp_client *client,
 						 uint16_t vlan_id)
 {
 	if (vlan_id > VLAN_VID_MASK) {
 		return NULL;
 	}
 	mac_key key;
-    mac_entry *me;
+	mac_entry *me;
 	memcpy(key.mac, mac, sizeof(key.mac));
 	key.vlan_id = vlan_id;
 	key.tenant_id = client->tenant_id;
 
-    SAFE_HASH_FIND(hh, macs, &key, sizeof(key), me);
-    if (me) {
+	SAFE_HASH_FIND(hh, macs, &key, sizeof(key), me);
+	if (me) {
 		return me;
 	}
-    me = calloc(1, sizeof(*me));
+	me = calloc(1, sizeof(*me));
 	if (!me) {
 		return NULL;
 	}
@@ -476,36 +476,36 @@ static mac_entry *get_mac(const uint8_t *mac,
 		printf("mac_entry 0x%p allocated\n", me);
 	}
 	me->key = key;
-    me->client = NULL;
+	me->client = NULL;
 	me->persistent = mac_timeout > 0 ? 0 : 1;
 	clock_gettime(CLOCK_MONOTONIC, &me->last_seen);
-    mac_reset_ctrs(me);
+	mac_reset_ctrs(me);
 	if (add_mac_to_client(client, me) < 0) {
 		free(me);
 		return NULL;
 	}
 	mac_entry_hold(me); //For return
-    SAFE_HASH_ADD_KEYPTR(hh, macs, &me->key, sizeof(me->key), me);
-    if (debug) {
+	SAFE_HASH_ADD_KEYPTR(hh, macs, &me->key, sizeof(me->key), me);
+	if (debug) {
 		log_mac(me, "Learned");
 	}
-    return me;
+	return me;
 }
 
 // Read and process incoming UDP frames (raw socket)
 static void
 udp_read_cb(evutil_socket_t sockfd, short what UNUSED, void *arg UNUSED)
 {
-    uint8_t buf[MAX_FRAME_SIZE];
-    ssize_t n;
+	uint8_t buf[MAX_FRAME_SIZE];
+	ssize_t n;
 
-    // Read one datagram capture source address
+	// Read one datagram capture source address
 read:
-    struct sockaddr_storage src_addr = {};
-    socklen_t addrlen = sizeof(src_addr);
-    n = recvfrom(sockfd, buf, sizeof(buf), 0,
-                 (struct sockaddr*)&src_addr, &addrlen);
-    if (n <= 0) {
+	struct sockaddr_storage src_addr = {};
+	socklen_t addrlen = sizeof(src_addr);
+	n = recvfrom(sockfd, buf, sizeof(buf), 0,
+				 (struct sockaddr*)&src_addr, &addrlen);
+	if (n <= 0) {
 		if (debug) {
 			printf("recvfrom error %s (%d)", strerror(errno), errno);
 		}
@@ -516,7 +516,7 @@ read:
 	}
 
 	// Get UDP Client entry
-    udp_client *src = get_client(0, (struct sockaddr*)&src_addr, addrlen);
+	udp_client *src = get_client(0, (struct sockaddr*)&src_addr, addrlen);
 	mac_entry *me = NULL;
 	if (!src) {
 		return;
@@ -549,8 +549,8 @@ read:
 		vlan_id = ntohs(vlan_hdr->vlan_tci) & VLAN_VID_MASK;
 	}
 
-    // Get MAC entry
-    me = get_mac(eth_hdr->ether_shost, src, vlan_id);
+	// Get MAC entry
+	me = get_mac(eth_hdr->ether_shost, src, vlan_id);
 	if (!me) {
 		if (debug) {
 			log_client(src, "Failed to get MAC object for %02x:%02x:%02x:%02x:%02x:%02x vlan %u",
@@ -562,24 +562,24 @@ read:
 		goto exit;
 	}
 
-    // Update stats
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    double since = now.tv_sec - me->last_seen.tv_sec;
-    if (me->client != src) {
-        if (since < min_learn_age) {
-            if (debug) {
+	// Update stats
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	double since = now.tv_sec - me->last_seen.tv_sec;
+	if (me->client != src) {
+		if (since < min_learn_age) {
+			if (debug) {
 				log_mac_client(me, src, "Skip re-learn (%.1fs < min_age)", since);
 			}
 			client_drop(src, n);
 			mac_drop(me, n);
-            goto exit;
-        } else {
+			goto exit;
+		} else {
 			if (debug) {
 				log_mac_client(me, src, "Re-learning after %.1fs", since);
 			}
-            remove_mac_from_client(me->client, me);
-            if (add_mac_to_client(src, me) < 0) {
+			remove_mac_from_client(me->client, me);
+			if (add_mac_to_client(src, me) < 0) {
 				if (debug) {
 					log_mac_client(me, src, "Failed to relearn on new client");
 				}
@@ -588,17 +588,17 @@ read:
 				mac_drop(me, n);
 				goto exit;
 			}
-            mac_reset_ctrs(me);
-        }
-    }    
-    me->last_seen = now;
+			mac_reset_ctrs(me);
+		}
+	}    
+	me->last_seen = now;
 
 	mac_add_rx(me, n);
 	client_add_rx(src, n);
 
-    // Forward packet
+	// Forward packet
 	bool is_group = eth_hdr->ether_dhost[0] & 0x01;
-    if (is_group) {
+	if (is_group) {
 		udp_client *cl, *ct;
 		// Multicast: forward to all clients with the VLAN present
 		SAFE_HASH_ITER(hh, clients, cl, ct) {
@@ -623,19 +623,19 @@ read:
 #if USE_PTHREAD
 				pthread_rwlock_unlock(&cl->vlan_list_lock);
 #endif
-            }
-        }
+			}
+		}
 		SAFE_HASH_ITER_DONE(hh, clients, cl, ct);
-    } else {
+	} else {
 		// Unicast: foward only to know MACs
 		mac_entry *dmac;
 		mac_key key;
-        memcpy(key.mac, eth_hdr->ether_dhost, sizeof(key.mac));
+		memcpy(key.mac, eth_hdr->ether_dhost, sizeof(key.mac));
 		key.vlan_id = vlan_id;
 		key.tenant_id = src->tenant_id;
-        SAFE_HASH_FIND(hh, macs, &key, sizeof(key), dmac);
-        if (dmac) {
-            udp_client *cl = dmac->client;
+		SAFE_HASH_FIND(hh, macs, &key, sizeof(key), dmac);
+		if (dmac) {
+			udp_client *cl = dmac->client;
 			if (cl == src) { //no need to check smac == dmac
 				log_client(src, "Cannot forward to self");
 				client_drop(src, n);
@@ -648,9 +648,9 @@ read:
 				udp_client_to_str(cl, cl_str, sizeof(cl_str));
 				log_client(src, "forward %u bytes to %s", n, cl_str);
 			}
-            if (sendto(sockfd, buf, n, 0,
-                   (struct sockaddr*)&cl->addr, cl->addrlen) > 0) {
-			    client_add_tx(cl, n);
+			if (sendto(sockfd, buf, n, 0,
+				   (struct sockaddr*)&cl->addr, cl->addrlen) > 0) {
+				client_add_tx(cl, n);
 				mac_add_tx(dmac, n);
 			} else {
 				if (debug) {
@@ -659,8 +659,8 @@ read:
 					mac_drop(me, n);
 				}
 			}
-	        mac_entry_release(dmac);
-        } else {
+			mac_entry_release(dmac);
+		} else {
 			if (debug > 1) {
 				log_client(src, "Unknown destination MAC %02x:%02x:%02x:%02x:%02x:%02x vlan %u",
 					eth_hdr->ether_dhost[0], eth_hdr->ether_dhost[1], eth_hdr->ether_dhost[2],
@@ -670,7 +670,7 @@ read:
 			client_drop(src, n);
 			mac_drop(me, n);
 		}
-    }
+	}
 exit:
 	if (me) {
 		mac_entry_release(me);
@@ -683,19 +683,19 @@ exit:
 static void
 dump_state(void)
 {
-    printf("Clients:%u\n", HASH_COUNT(clients));
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
+	printf("Clients:%u\n", HASH_COUNT(clients));
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
 	udp_client *cl, *ct;
 	SAFE_HASH_ITER(hh, clients, cl, ct) {
-        char cl_str[UDPCLIENT_STR_LEN];
+		char cl_str[UDPCLIENT_STR_LEN];
 		udp_client_to_str(cl, cl_str, sizeof(cl_str));
-        printf("  %s  rx:%zu/%zu  tx:%zu/%zu  drop:%zu/%zu  VLANs:%zu\n",
-               cl_str,
-               cl->rxframes, cl->rxbytes,
-               cl->txframes, cl->txbytes,
+		printf("  %s  rx:%zu/%zu  tx:%zu/%zu  drop:%zu/%zu  VLANs:%zu\n",
+			   cl_str,
+			   cl->rxframes, cl->rxbytes,
+			   cl->txframes, cl->txbytes,
 			   cl->dropframes, cl->dropbytes,
-               cl->vlan_count);
+			   cl->vlan_count);
 #if USE_PTHREAD
 		pthread_rwlock_rdlock(&cl->vlan_list_lock);
 #endif
@@ -725,7 +725,7 @@ dump_state(void)
 #if USE_PTHREAD
 		pthread_rwlock_unlock(&cl->vlan_list_lock);
 #endif
-    }
+	}
 	SAFE_HASH_ITER_DONE(hh, clients, cl, ct);
 	printf("Press ctrl-c two times in two seconds to terminate\n");
 }
@@ -733,14 +733,14 @@ dump_state(void)
 static void
 sigint_cb(evutil_socket_t sig UNUSED, short events UNUSED, void *arg)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if ((now.tv_sec - last_interrupt.tv_sec) < 2) {
-        event_base_loopexit((struct event_base*)arg, NULL);
-    } else {
-        last_interrupt = now;
-        dump_state();
-    }
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	if ((now.tv_sec - last_interrupt.tv_sec) < 2) {
+		event_base_loopexit((struct event_base*)arg, NULL);
+	} else {
+		last_interrupt = now;
+		dump_state();
+	}
 }
 
 static void
@@ -749,9 +749,9 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 	struct event *timer_event = (struct event *)arg;
 	bool to_delete = false;
 	bool check_clients = false;
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    mac_entry *me, *mt;
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	mac_entry *me, *mt;
 	SAFE_HASH_ITER(hh, macs, me, mt) {
 		if (debug > 1) {
 			double age = (now.tv_sec - me->last_seen.tv_sec)
@@ -759,11 +759,11 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 			log_mac_client(me, me->client, "Checking age (%.3fs) persistent=%s",
 					age, me->persistent?"true":"false");
 		}
-        if (!me->persistent && ((now.tv_sec - me->last_seen.tv_sec) >= mac_timeout)) {
+		if (!me->persistent && ((now.tv_sec - me->last_seen.tv_sec) >= mac_timeout)) {
 			to_delete = true;
 			break;
-        }
-    }
+		}
+	}
 	SAFE_HASH_ITER_DONE(hh, macs, me, mt);
 	
 	if (!to_delete) {
@@ -771,19 +771,19 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 	}
 
 	SAFE_HASH_ITER_WRITE(hh, macs, me, mt) {
-        if (!me->persistent && ((now.tv_sec - me->last_seen.tv_sec) >= mac_timeout)) {
+		if (!me->persistent && ((now.tv_sec - me->last_seen.tv_sec) >= mac_timeout)) {
 			udp_client *cl = me->client;
 			log_mac_client(me, cl, "Aged out");
 			// Don't use SAFE_HASH_DEL, already in lock
 			HASH_DEL(macs, me);
-            remove_mac_from_client(cl, me);
+			remove_mac_from_client(cl, me);
 			if (!keep_clients && !cl->persistent && cl->vlan_count == 0) {
 				// Avoid lock inversion, delete client outside of MAC loop
 				check_clients = true;
 			}
 			mac_entry_release(me);
-        }
-    }
+		}
+	}
 	SAFE_HASH_ITER_DONE(hh, macs, me, mt);
 
 	if (check_clients) {
@@ -800,18 +800,18 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 		SAFE_HASH_ITER_DONE(hh, clients, cl, ct);
 	}
 reschedule:
-    struct timeval tv = { .tv_sec = MAC_CHECK_INTERVAL, .tv_usec = 0 };
-    evtimer_add(timer_event, &tv);
+	struct timeval tv = { .tv_sec = MAC_CHECK_INTERVAL, .tv_usec = 0 };
+	evtimer_add(timer_event, &tv);
 }
 
 static mac_entry *add_persistent_mac_to_vlan(udp_client *client, vlan_entry *vl, const char *mac_str)
 {
 	uint8_t mac[6];
-    if (sscanf(mac_str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-               &mac[0], &mac[1], &mac[2],
-               &mac[3], &mac[4], &mac[5]) != 6) {
-        return NULL;
-    }
+	if (sscanf(mac_str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+			   &mac[0], &mac[1], &mac[2],
+			   &mac[3], &mac[4], &mac[5]) != 6) {
+		return NULL;
+	}
 
 	mac_entry *me = get_mac(mac, client, vl->vlan_id);
 	if (me) {
@@ -819,7 +819,7 @@ static mac_entry *add_persistent_mac_to_vlan(udp_client *client, vlan_entry *vl,
 		log_mac_client(me, client, "Added persistent MAC");
 	}
 
-    return me;
+	return me;
 }
 
 static vlan_entry *add_persistent_vlan_to_client(udp_client *cl, uint16_t vlan_id)
@@ -833,7 +833,7 @@ static vlan_entry *add_persistent_vlan_to_client(udp_client *cl, uint16_t vlan_i
 	}
 	vl->persistent = true;
 	log_client(cl, "Added persistent VLAN %u", vlan_id);
-    return vl;
+	return vl;
 }
 
 static udp_client *add_persistent_client(int tenant_id, const char *ip, int port)
@@ -846,22 +846,22 @@ static udp_client *add_persistent_client(int tenant_id, const char *ip, int port
 		fprintf(stderr, "Invalid tenant %d for client %s:%d\n", tenant_id, ip, port);
 		return NULL;
 	}
-    struct sockaddr_storage ss = {0};
-    socklen_t slen;
-    if (strchr(ip, ':')) {
-        struct sockaddr_in6 *sin6 = (void *)&ss;
-        sin6->sin6_family = AF_INET6;
+	struct sockaddr_storage ss = {0};
+	socklen_t slen;
+	if (strchr(ip, ':')) {
+		struct sockaddr_in6 *sin6 = (void *)&ss;
+		sin6->sin6_family = AF_INET6;
 		if (inet_pton(AF_INET6, ip, &sin6->sin6_addr) == 0) {
 			fprintf(stderr, "Invalid client IPv6 address %s\n", ip);
 			return NULL;
 		}
-        sin6->sin6_port = htons(port);
-        slen = sizeof(*sin6);
+		sin6->sin6_port = htons(port);
+		slen = sizeof(*sin6);
 		if (bind_family == AF_INET) {
 			fprintf(stderr, "Cannot add IPv6 (%s) client on IPv4 socket.\n", ip);
 			return NULL;
 		}
-    } else {
+	} else {
 		struct in_addr addr = {};
 		if (inet_pton(AF_INET, ip, &addr) == 0) {
 			fprintf(stderr, "Invalid client IP address %s\n", ip);
@@ -881,11 +881,11 @@ static udp_client *add_persistent_client(int tenant_id, const char *ip, int port
 			sin6->sin6_port = htons(port);
 			slen = sizeof(*sin6);
 		}
-    }
-    udp_client *cl = get_client((uint32_t)tenant_id, (struct sockaddr *)&ss, slen);
-    if (cl) {
+	}
+	udp_client *cl = get_client((uint32_t)tenant_id, (struct sockaddr *)&ss, slen);
+	if (cl) {
 		cl->persistent = true;
-        log_client(cl, "Added persistent client");
+		log_client(cl, "Added persistent client");
 		if (cl->tenant_id != (uint32_t)tenant_id) {
 			log_client(cl, "Existing tenant_id (%u) != requested tenant id (%u)", cl->tenant_id, tenant_id);
 		}
@@ -895,38 +895,38 @@ static udp_client *add_persistent_client(int tenant_id, const char *ip, int port
 
 static void load_clients_from_json_config(const char *cfg_file)
 {
-    json_error_t error;
-    json_t *root = json_load_file(cfg_file, 0, &error);
-    if (!root) {
-        fprintf(stderr, "JSON parse error %s: line %d: %s\n",
-                error.source, error.line, error.text);
-        exit(EXIT_FAILURE);
-    }
-    json_t *clients_arr = json_object_get(root, "clients");
-    if (!json_is_array(clients_arr)) {
-        fprintf(stderr, "Config: 'clients' is not an array\n"); json_decref(root); exit(EXIT_FAILURE);
-    }
-    size_t idx;
-    json_t *ent;
-    json_array_foreach(clients_arr, idx, ent) {
-        json_t *ip_val = json_object_get(ent, "ip");
+	json_error_t error;
+	json_t *root = json_load_file(cfg_file, 0, &error);
+	if (!root) {
+		fprintf(stderr, "JSON parse error %s: line %d: %s\n",
+				error.source, error.line, error.text);
+		exit(EXIT_FAILURE);
+	}
+	json_t *clients_arr = json_object_get(root, "clients");
+	if (!json_is_array(clients_arr)) {
+		fprintf(stderr, "Config: 'clients' is not an array\n"); json_decref(root); exit(EXIT_FAILURE);
+	}
+	size_t idx;
+	json_t *ent;
+	json_array_foreach(clients_arr, idx, ent) {
+		json_t *ip_val = json_object_get(ent, "ip");
 		if (!ip_val || !json_is_string(ip_val)) {
-            fprintf(stderr, "Invalid 'ip' for client index %zu\n", idx);
-            continue;
+			fprintf(stderr, "Invalid 'ip' for client index %zu\n", idx);
+			continue;
 		}
-        json_t *port_val = json_object_get(ent, "port");
+		json_t *port_val = json_object_get(ent, "port");
 		if (!port_val || !json_is_integer(port_val)) {
-            fprintf(stderr, "Invalid 'port' for client index %zu\n", idx);
-            continue;
+			fprintf(stderr, "Invalid 'port' for client index %zu\n", idx);
+			continue;
 		}
 		json_t *tenant_val = json_object_get(ent, "tenant");
 		if (tenant_val && !json_is_integer(tenant_val)) {
-            fprintf(stderr, "Invalid 'tenant' for client index %zu\n", idx);
-            continue;
+			fprintf(stderr, "Invalid 'tenant' for client index %zu\n", idx);
+			continue;
 		}
 
-        const char *ip = json_string_value(ip_val);
-        int port = (int)json_integer_value(port_val);
+		const char *ip = json_string_value(ip_val);
+		int port = (int)json_integer_value(port_val);
 		int tenant_id = tenant_val ? (int)json_integer_value(tenant_val) : 0;
 		udp_client *cl = add_persistent_client(tenant_id, ip, port);
 		if (!cl) {
@@ -934,18 +934,18 @@ static void load_clients_from_json_config(const char *cfg_file)
 		}
 
 		//Optional VLANs; if none, assume VLAN 0 for broadcasting
-        json_t *vlans = json_object_get(ent, "vlans");
-        if (json_is_array(vlans)) {
-            size_t j;
-            json_t *vlan;
-            json_array_foreach(vlans, j, vlan) {
-                if (json_is_integer(vlan)) {
-                    uint16_t vid_i = (uint16_t)json_integer_value(vlan);
-                    vlan_entry *vl UNUSED = add_persistent_vlan_to_client(cl, vid_i);
+		json_t *vlans = json_object_get(ent, "vlans");
+		if (json_is_array(vlans)) {
+			size_t j;
+			json_t *vlan;
+			json_array_foreach(vlans, j, vlan) {
+				if (json_is_integer(vlan)) {
+					uint16_t vid_i = (uint16_t)json_integer_value(vlan);
+					vlan_entry *vl UNUSED = add_persistent_vlan_to_client(cl, vid_i);
 					if (vl) {
 						vlan_entry_release(vl);
 					}
-                } else if (json_is_object(vlan)) {
+				} else if (json_is_object(vlan)) {
 					json_t *vid = json_object_get(vlan, "id");
 					json_t *macs = json_object_get(vlan, "macs");
 					if (json_is_integer(vid)) {
@@ -965,52 +965,52 @@ static void load_clients_from_json_config(const char *cfg_file)
 						vlan_entry_release(vl);
 					}
 				}
-            }
-        } else {
+			}
+		} else {
 			vlan_entry *vl UNUSED = add_persistent_vlan_to_client(cl, 0);
 			if (vl) {
 				vlan_entry_release(vl);
 			}
 		}
-	    udp_client_release(cl);
-    }
-    json_decref(root);
+		udp_client_release(cl);
+	}
+	json_decref(root);
 }
 
 int create_socket(void)
 {
 	struct sockaddr_storage addr = {};
 	int addrlen = 0;
-    if (bind_family == AF_INET6) {
+	if (bind_family == AF_INET6) {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr;
 		sin6->sin6_family = bind_family;
-        sin6->sin6_port = htons(port);
+		sin6->sin6_port = htons(port);
 		inet_pton(bind_family, bind_ip, &sin6->sin6_addr);
 		addrlen = sizeof(struct sockaddr_in6);
 	} else { //AF_INET
 		struct sockaddr_in *sin4 = (struct sockaddr_in *)&addr;
 		sin4->sin_family = bind_family;
-        sin4->sin_port=htons(port);
+		sin4->sin_port=htons(port);
 		inet_pton(bind_family, bind_ip, &sin4->sin_addr);
 		addrlen = sizeof(struct sockaddr_in);
 	}
 
-    int sock = socket(bind_family, SOCK_DGRAM, 0);
+	int sock = socket(bind_family, SOCK_DGRAM, 0);
 
 #if USE_PTHREAD
 	int on = 1;
 #ifdef SO_REUSEPORT
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)) < 0) {
-        perror("setsockopt SO_REUSEPORT");
-        close(sock);
-        return -1;
-    }
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)) < 0) {
+		perror("setsockopt SO_REUSEPORT");
+		close(sock);
+		return -1;
+	}
 #else
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-        perror("setsockopt SO_REUSEADDR");
-        close(sock);
-        return -1;
-    }
+		perror("setsockopt SO_REUSEADDR");
+		close(sock);
+		return -1;
+	}
 #endif
 #endif
 	
@@ -1050,8 +1050,8 @@ threadinfo *threads;
 static void
 wake_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg)
 {
-    struct event_base *base = arg;
-    event_base_loopbreak(base);
+	struct event_base *base = arg;
+	event_base_loopbreak(base);
 }
 
 static void *
@@ -1067,12 +1067,12 @@ udp_thread_fn(void *arg)
 	
 	printf("[%s] Starting UDP switch on port %d\n", thread_str, port);
 
-    struct event_base *base = create_event_base();
-    if (!base) {
-        fprintf(stderr, "create_event_base failed\n");
-        close(sock);
-        return NULL;
-    }
+	struct event_base *base = create_event_base();
+	if (!base) {
+		fprintf(stderr, "create_event_base failed\n");
+		close(sock);
+		return NULL;
+	}
 	//threads[thread_idx].base = base;
 
 	int fds[2];
@@ -1087,20 +1087,20 @@ udp_thread_fn(void *arg)
 	struct event *wake_event = event_new(base, fds[0], EV_READ|EV_PERSIST, wake_cb, base);
 	event_add(wake_event, NULL);
 
-    struct event *udp_event = event_new(base, sock, EV_READ|EV_PERSIST, udp_read_cb, NULL);
-    event_add(udp_event, NULL);
+	struct event *udp_event = event_new(base, sock, EV_READ|EV_PERSIST, udp_read_cb, NULL);
+	event_add(udp_event, NULL);
 
-    event_base_dispatch(base);
+	event_base_dispatch(base);
 
 	event_del(udp_event);
-    event_free(udp_event);
-    close(fds[0]);
-    close(fds[1]);
+	event_free(udp_event);
+	close(fds[0]);
+	close(fds[1]);
 	event_del(wake_event);
-    event_free(wake_event);
-    event_base_free(base);
-    close(sock);
-    return NULL;
+	event_free(wake_event);
+	event_base_free(base);
+	close(sock);
+	return NULL;
 }
 
 #endif
@@ -1108,54 +1108,54 @@ udp_thread_fn(void *arg)
 static int
 parse_client_spec(const char *spec_str)
 {
-    char ipbuf[INET6_ADDRSTRLEN + 1] = {0};
-    const char *port_start = NULL;
+	char ipbuf[INET6_ADDRSTRLEN + 1] = {0};
+	const char *port_start = NULL;
 
-    // Extract IP (handle IPv6 in brackets)
-    if (*spec_str == '[') {
-        const char *end = strchr(spec_str, ']');
-        if (!end || *(end + 1) != ':') {
-            fprintf(stderr, "Invalid IPv6 client spec (missing ]:): %s\n", spec_str);
-            return -1;
-        }
-        size_t iplen = end - (spec_str + 1);
-        if (iplen >= sizeof(ipbuf)) {
-            fprintf(stderr, "IPv6 address too long: %s\n", spec_str);
-            return -1;
-        }
-        memcpy(ipbuf, spec_str + 1, iplen);
-        ipbuf[iplen] = '\0';
-        port_start = end + 2;
-    } else {
-        const char *colon = strchr(spec_str, ':');
-        if (!colon) {
-            fprintf(stderr, "Missing port in client spec: %s\n", spec_str);
-            return -1;
-        }
-        size_t iplen = colon - spec_str;
-        if (iplen >= sizeof(ipbuf)) {
-            fprintf(stderr, "IPv4 address too long: %s\n", spec_str);
-            return -1;
-        }
-        memcpy(ipbuf, spec_str, iplen);
-        ipbuf[iplen] = '\0';
-        port_start = colon + 1;
-    }
+	// Extract IP (handle IPv6 in brackets)
+	if (*spec_str == '[') {
+		const char *end = strchr(spec_str, ']');
+		if (!end || *(end + 1) != ':') {
+			fprintf(stderr, "Invalid IPv6 client spec (missing ]:): %s\n", spec_str);
+			return -1;
+		}
+		size_t iplen = end - (spec_str + 1);
+		if (iplen >= sizeof(ipbuf)) {
+			fprintf(stderr, "IPv6 address too long: %s\n", spec_str);
+			return -1;
+		}
+		memcpy(ipbuf, spec_str + 1, iplen);
+		ipbuf[iplen] = '\0';
+		port_start = end + 2;
+	} else {
+		const char *colon = strchr(spec_str, ':');
+		if (!colon) {
+			fprintf(stderr, "Missing port in client spec: %s\n", spec_str);
+			return -1;
+		}
+		size_t iplen = colon - spec_str;
+		if (iplen >= sizeof(ipbuf)) {
+			fprintf(stderr, "IPv4 address too long: %s\n", spec_str);
+			return -1;
+		}
+		memcpy(ipbuf, spec_str, iplen);
+		ipbuf[iplen] = '\0';
+		port_start = colon + 1;
+	}
 
-    // Parse port[:vlan[:mac]] with %n tracking
-    int port = -1, vlan = 0, tenant = 0;
-    char macbuf[32] = {0};
-    int port_n = 0, vlan_n = 0, total_n = 0;
+	// Parse port[:vlan[:mac]] with %n tracking
+	int port = -1, vlan = 0, tenant = 0;
+	char macbuf[32] = {0};
+	int port_n = 0, vlan_n = 0, total_n = 0;
 
-    int fields = sscanf(port_start, "%d%n:%d%n:%31[^@]%n",
-                        &port, &port_n,
-                        &vlan, &vlan_n,
-                        macbuf, &total_n);
+	int fields = sscanf(port_start, "%d%n:%d%n:%31[^@]%n",
+						&port, &port_n,
+						&vlan, &vlan_n,
+						macbuf, &total_n);
 
-    if (fields < 1 || port_n == 0 || port <= 0 || port > 65535) {
-        fprintf(stderr, "Invalid or missing port in client spec: %s\n", port_start);
-        return -1;
-    }
+	if (fields < 1 || port_n == 0 || port <= 0 || port > 65535) {
+		fprintf(stderr, "Invalid or missing port in client spec: %s\n", port_start);
+		return -1;
+	}
 
 	if (fields >= 2) {
 		if (vlan_n <= port_n + 1 || vlan < 0 || vlan > 4095) {
@@ -1173,22 +1173,22 @@ parse_client_spec(const char *spec_str)
 		}
 	}
 
-    // Validate IP address
-    struct in6_addr dummy6;
-    struct in_addr dummy4;
-    int family = strchr(ipbuf, ':') ? AF_INET6 : AF_INET;
-    if ((family == AF_INET6 && inet_pton(AF_INET6, ipbuf, &dummy6) != 1) ||
-        (family == AF_INET && inet_pton(AF_INET, ipbuf, &dummy4) != 1)) {
-        fprintf(stderr, "Invalid IP address: %s\n", ipbuf);
-        return -1;
-    }
+	// Validate IP address
+	struct in6_addr dummy6;
+	struct in_addr dummy4;
+	int family = strchr(ipbuf, ':') ? AF_INET6 : AF_INET;
+	if ((family == AF_INET6 && inet_pton(AF_INET6, ipbuf, &dummy6) != 1) ||
+		(family == AF_INET && inet_pton(AF_INET, ipbuf, &dummy4) != 1)) {
+		fprintf(stderr, "Invalid IP address: %s\n", ipbuf);
+		return -1;
+	}
 
-    // Add client, VLAN, optional MAC
-    udp_client *cl = add_persistent_client(tenant, ipbuf, port);
-    if (!cl) {
-        fprintf(stderr, "Failed to add client %s:%d\n", ipbuf, port);
-        return -1;
-    }
+	// Add client, VLAN, optional MAC
+	udp_client *cl = add_persistent_client(tenant, ipbuf, port);
+	if (!cl) {
+		fprintf(stderr, "Failed to add client %s:%d\n", ipbuf, port);
+		return -1;
+	}
 
 	vlan_entry *vl = add_persistent_vlan_to_client(cl, vlan);
 	if (!vl) {
@@ -1208,9 +1208,9 @@ parse_client_spec(const char *spec_str)
 		mac_entry_release(me);
 	}
 	vlan_entry_release(vl);
-    udp_client_release(cl);
+	udp_client_release(cl);
 
-    return 0;
+	return 0;
 }
 
 
@@ -1220,7 +1220,7 @@ int main(int argc, char **argv)
 	int num_clients = 0;
 
 	static struct option long_options[] = {
-        { "config"        , required_argument, 0, 'c' },
+		{ "config"        , required_argument, 0, 'c' },
 		{ "port"          , required_argument, 0, 'p' },
 		{ "bind-ip"       , required_argument, 0, 'b' },
 		{ "client"        , required_argument, 0, 'C' },
@@ -1235,9 +1235,9 @@ int main(int argc, char **argv)
 	int opt, option_index = 0;
 	while ((opt = getopt_long(argc, argv, "c:p:b:C:kt:m:r:dh?", long_options, &option_index)) != -1) {
 		switch (opt) {
-            case 'c':
-                cfg_file = optarg;
-                break;
+			case 'c':
+				cfg_file = optarg;
+				break;
 			case 'p':
 				port = atoi(optarg);
 				break;
@@ -1334,61 +1334,61 @@ int main(int argc, char **argv)
 	}
 	
 	if (cfg_file) {
-        load_clients_from_json_config(cfg_file);
-    }
+		load_clients_from_json_config(cfg_file);
+	}
 
 #if USE_PTHREAD
-    evthread_use_pthreads();
+	evthread_use_pthreads();
 
-    struct event_base *base = create_event_base();
-    if (!base) { fprintf(stderr, "Libevent init failed\n"); return 1; }
+	struct event_base *base = create_event_base();
+	if (!base) { fprintf(stderr, "Libevent init failed\n"); return 1; }
 
-    threads = calloc(num_threads, sizeof(*threads));
-    for (int i = 0; i < num_threads; i++) {
+	threads = calloc(num_threads, sizeof(*threads));
+	for (int i = 0; i < num_threads; i++) {
 		threads[i].wake_fd = -1;
-        if (pthread_create(&threads[i].tid, NULL, udp_thread_fn, (void*)(intptr_t)i) != 0) {
-            perror("pthread_create");
-            return 1;
-        }
-    }
+		if (pthread_create(&threads[i].tid, NULL, udp_thread_fn, (void*)(intptr_t)i) != 0) {
+			perror("pthread_create");
+			return 1;
+		}
+	}
 #else
 	printf("Starting UDP switch on port %d\n", port);
-    struct event_base *base = create_event_base();
-    if (!base) { fprintf(stderr, "Libevent init failed\n"); return 1; }
+	struct event_base *base = create_event_base();
+	if (!base) { fprintf(stderr, "Libevent init failed\n"); return 1; }
 
 	int sock = create_socket();
 	if (sock < 0) {
 		return 1;
 	}
 
-    // Setup raw event for UDP reads
-    struct event *read_event = event_new(base, sock, EV_READ|EV_PERSIST, udp_read_cb, NULL);
-    event_add(read_event, NULL);
+	// Setup raw event for UDP reads
+	struct event *read_event = event_new(base, sock, EV_READ|EV_PERSIST, udp_read_cb, NULL);
+	event_add(read_event, NULL);
 #endif
 
-    // SIGINT handler
-    struct event *signal_event = evsignal_new(base, SIGINT, sigint_cb, base);
-    event_add(signal_event, NULL);
+	// SIGINT handler
+	struct event *signal_event = evsignal_new(base, SIGINT, sigint_cb, base);
+	event_add(signal_event, NULL);
 
-    // Schedule MAC aging
-    struct event *timer_event = evtimer_new(base, mac_age_cb, event_self_cbarg());
-    struct timeval initial = { .tv_sec = MAC_CHECK_INTERVAL, .tv_usec = 0 };
-    evtimer_add(timer_event, &initial);
+	// Schedule MAC aging
+	struct event *timer_event = evtimer_new(base, mac_age_cb, event_self_cbarg());
+	struct timeval initial = { .tv_sec = MAC_CHECK_INTERVAL, .tv_usec = 0 };
+	evtimer_add(timer_event, &initial);
 
-    // Start dispatcher
-    event_base_dispatch(base);
+	// Start dispatcher
+	event_base_dispatch(base);
 
 #if USE_PTHREAD
-    // Join threads on shutdown
-    for (int i = 0; i < num_threads; i++) {
-	    char one = 1;
+	// Join threads on shutdown
+	for (int i = 0; i < num_threads; i++) {
+		char one = 1;
 		if (threads[i].wake_fd >= 0) {
 			write(threads[i].wake_fd, &one, 1);
 		}
-    }
-    for (int i = 0; i < num_threads; i++) {
-        pthread_join(threads[i].tid, NULL);
-    }
+	}
+	for (int i = 0; i < num_threads; i++) {
+		pthread_join(threads[i].tid, NULL);
+	}
 	free(threads);
 #else
 	event_del(read_event);
@@ -1396,9 +1396,9 @@ int main(int argc, char **argv)
 	close(sock);
 #endif
 
-    // Cleanup
-    mac_entry *me, *mt;
-    SAFE_HASH_ITER_WRITE(hh, macs, me, mt) {
+	// Cleanup
+	mac_entry *me, *mt;
+	SAFE_HASH_ITER_WRITE(hh, macs, me, mt) {
 		// Clear VLAN persistent flag so the can be automatically cleaned up
 		me->vlan->persistent = false;
 		remove_mac_from_client(me->client, me);
@@ -1409,8 +1409,8 @@ int main(int argc, char **argv)
 	SAFE_HASH_ITER_DONE(hh, macs, me, mt);
 	HASH_CLEAR(hh, macs);
 
-    udp_client *c, *ct;
-    SAFE_HASH_ITER_WRITE(hh, clients, c, ct) { 
+	udp_client *c, *ct;
+	SAFE_HASH_ITER_WRITE(hh, clients, c, ct) { 
 #if USE_PTHREAD
 		pthread_rwlock_wrlock(&c->vlan_list_lock);
 #endif
@@ -1433,10 +1433,10 @@ int main(int argc, char **argv)
 	HASH_CLEAR(hh, clients);
 	
 	event_del(timer_event);
-    event_free(timer_event);
+	event_free(timer_event);
 	event_del(signal_event);
-    event_free(signal_event);
-    event_base_free(base);
+	event_free(signal_event);
+	event_base_free(base);
 	printf("Done\n");
-    return 0;
+	return 0;
 }
