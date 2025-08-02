@@ -34,7 +34,7 @@ typedef struct ether_header {
 	uint8_t  ether_dhost[ETHER_ADDR_LEN];  /* destination eth addr */
 	uint8_t  ether_shost[ETHER_ADDR_LEN];  /* source eth addr    */
 	uint16_t ether_type;                   /* packet type ID field */
-		uint8_t  data[0];
+	uint8_t  data[0];
 } __attribute__((packed)) ether_header;
 
 #define ETH_P_8021Q_NET  htons(0x8100)
@@ -43,7 +43,7 @@ typedef struct ether_header {
 typedef struct vlan_header {
 	uint16_t vlan_tci;       /* vlan id/prio    */
 	uint16_t ether_type;     /* packet type ID field */
-		uint8_t  data[0];
+	uint8_t  data[0];
 } __attribute__((packed)) vlan_header;
 
 typedef struct tenant_entry {
