@@ -4,9 +4,10 @@ CFLAGS  := -std=gnu11 -g -O2 -Wall -Wextra
 LDFLAGS := -levent -levent_pthreads -lpthread -ljansson
 
 # File and directory settings
+SRC_DIR   := src
 BUILD_DIR := build
-SRC       := $(wildcard *.c)
-OBJ       := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SRC))
+SRC       := $(wildcard $(SRC_DIR)/*.c)
+OBJ       := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC))
 DEPS      := $(OBJ:.o=.d)
 TARGET    := $(BUILD_DIR)/udp_switch
 
@@ -14,14 +15,17 @@ udp_switch: $(TARGET)
 
 all: udp_switch
 
+
+
 # Link final binary
 $(TARGET): $(OBJ)
-	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
+$(BUILD_DIR):
+	mkdir -p $@
+
 # Compile .c to .o with dependency file
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(BUILD_DIR)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -MMD -c $< -o $@
 
 # Include generated dependency files
