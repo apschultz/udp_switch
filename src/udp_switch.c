@@ -24,7 +24,7 @@
 #include <event2/buffer.h>
 #include <jansson.h>
 #include <libgen.h>
-#include "uthash.h"
+#include <uthash.h>
 
 #define USE_PTHREAD 1
 #if USE_PTHREAD
