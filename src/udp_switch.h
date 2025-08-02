@@ -50,138 +50,128 @@ typedef struct tenant_entry {
     uint32_t                tenant_id;
     dlist                   client_list;
     dlist_entry             global_dle;
-        uint32_t                refcount;
+	uint32_t                refcount;
 } tenant_entry;
 
-#if USE_PTHREAD
 static inline void tenant_entry_hold(tenant_entry *te)
 {
         __atomic_add_fetch(&te->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void tenant_entry_release(tenant_entry *te)
 {
-        if (__atomic_sub_fetch(&te->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
-                if (debug > 2) {
-                        printf("tenant_entry 0x%p freed\n", te);
-                }
-                free(te);
-        }
+	if (__atomic_sub_fetch(&te->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
+		if (debug > 2) {
+			printf("tenant_entry 0x%p freed\n", te);
+		}
+		free(te);
+	}
 }
-#endif
 
 typedef struct mac_entry mac_entry;
 typedef struct vlan_entry vlan_entry;
 
 typedef struct udp_client {
-        uint32_t                tenant_id;
-    struct sockaddr_storage addr;
-    socklen_t               addrlen;
-        bool                    persistent;
-        dlist                   mac_list;
-        size_t                  mac_count;
-        vlan_bitmap             vlans;
-        dlist                   vlan_list;
-        size_t                  vlan_count;
-    size_t                  rxframes;
-    size_t                  rxbytes;
-    size_t                  txframes;
-    size_t                  txbytes;
-    size_t                  dropframes;
-    size_t                  dropbytes;
-    UT_hash_handle          hh;
-        tenant_entry           *tenant;
-        dlist_entry             tenant_dle;
+	uint32_t                tenant_id;
+	struct sockaddr_storage addr;
+	socklen_t               addrlen;
+	bool                    persistent;
+	dlist                   mac_list;
+	size_t                  mac_count;
+	vlan_bitmap             vlans;
+	dlist                   vlan_list;
+	size_t                  vlan_count;
+	size_t                  rxframes;
+	size_t                  rxbytes;
+	size_t                  txframes;
+	size_t                  txbytes;
+	size_t                  dropframes;
+	size_t                  dropbytes;
+	UT_hash_handle          hh;
+	tenant_entry           *tenant;
+	dlist_entry             tenant_dle;
+	uint32_t                refcount;
 #if USE_PTHREAD
-        uint32_t                refcount;
-    pthread_mutex_t         mac_list_lock;
-    pthread_rwlock_t        vlan_list_lock;
+	pthread_mutex_t         mac_list_lock;
+	pthread_rwlock_t        vlan_list_lock;
 #endif
 } udp_client;
 
-#if USE_PTHREAD
 static inline void udp_client_hold(udp_client *cl)
 {
-        __atomic_add_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST);
+    __atomic_add_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void udp_client_release(udp_client *cl)
 {
-        if (__atomic_sub_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
-                if (debug > 2) {
-                        printf("udp_client 0x%p freed\n", cl);
-                }
-                free(cl);
-        }
+	if (__atomic_sub_fetch(&cl->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
+		if (debug > 2) {
+			printf("udp_client 0x%p freed\n", cl);
+		}
+		free(cl);
+	}
 }
-#endif
 
 typedef struct vlan_entry {
-        uint16_t                vlan_id;
-        bool                    persistent;
-        dlist                   mac_list;
-        dlist_entry             client_dle;
-        size_t                  mac_count;
+	uint16_t                vlan_id;
+	bool                    persistent;
+	dlist                   mac_list;
+	dlist_entry             client_dle;
+	size_t                  mac_count;
+	uint32_t                refcount;
 #if USE_PTHREAD
-    pthread_mutex_t         mac_list_lock;
-        uint32_t                refcount;
+	pthread_mutex_t         mac_list_lock;
 #endif
 } vlan_entry;
 
-#if USE_PTHREAD
 static inline void vlan_entry_hold(vlan_entry *me)
 {
-        __atomic_add_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void vlan_entry_release(vlan_entry *vl)
 {
-        if (__atomic_sub_fetch(&vl->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
-                if (debug > 2) {
-                        printf("vlan_entry 0x%p freed\n", vl);
-                }
-                free(vl);
-        }
+	if (__atomic_sub_fetch(&vl->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
+		if (debug > 2) {
+			printf("vlan_entry 0x%p freed\n", vl);
+		}
+		free(vl);
+	}
 }
-#endif
 
 typedef struct mac_key {
-        uint8_t                  mac[6];
-        uint16_t                 vlan_id;
-        uint32_t tenant_id;
+	uint8_t                  mac[6];
+	uint16_t                 vlan_id;
+	uint32_t tenant_id;
 } __attribute__((packed)) mac_key;
 
 struct mac_entry {
-        mac_key                  key;
-        bool                     persistent;
-    udp_client              *client;          /* pointer to client */
-    vlan_entry              *vlan;            /* pointer to vlan */
-    struct timespec          last_seen;       /* monotonic timestamp */
-    size_t                   rxframes;
-    size_t                   rxbytes;
-    size_t                   txframes;
-    size_t                   txbytes;
-    size_t                   dropframes;
-    size_t                   dropbytes;
-    UT_hash_handle           hh;
-        dlist_entry              client_dle;
-        dlist_entry              vlan_dle;
-#if USE_PTHREAD
-        uint32_t                 refcount;
-#endif
+	mac_key                  key;
+	bool                     persistent;
+	udp_client              *client;          /* pointer to client */
+	vlan_entry              *vlan;            /* pointer to vlan */
+	struct timespec          last_seen;       /* monotonic timestamp */
+	size_t                   rxframes;
+	size_t                   rxbytes;
+	size_t                   txframes;
+	size_t                   txbytes;
+	size_t                   dropframes;
+	size_t                   dropbytes;
+	UT_hash_handle           hh;
+	dlist_entry              client_dle;
+	dlist_entry              vlan_dle;
+	uint32_t                 refcount;
 };
 
-#if USE_PTHREAD
 static inline void mac_entry_hold(mac_entry *me)
 {
-        __atomic_add_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST);
 }
 static inline void mac_entry_release(mac_entry *me)
 {
-        if (__atomic_sub_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
-                if (debug > 2) {
-                        printf("mac_entry 0x%p freed\n", me);
-                }
-                free(me);
-        }
+	if (__atomic_sub_fetch(&me->refcount, 1, __ATOMIC_SEQ_CST) == 0) {
+		if (debug > 2) {
+			printf("mac_entry 0x%p freed\n", me);
+		}
+		free(me);
+	}
 }
-#endif
 
 #endif /* UDP_SWITCH_H */

@@ -226,8 +226,8 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
     for (dlist_entry *dle = tenant_list.head; dle; dle = dle->next) {
         tenant_entry *te = container_of(dle, tenant_entry, global_dle);
         if (te->tenant_id == tenant_id) {
-#if USE_PTHREAD
 			tenant_entry_hold(te);
+#if USE_PTHREAD
 			pthread_mutex_unlock(&tenant_list_lock);
 #endif
 			return te;
@@ -235,6 +235,9 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
     }
     tenant_entry *te = calloc(1, sizeof(*te));
 	if (!te) {
+#if USE_PTHREAD
+		pthread_mutex_unlock(&tenant_list_lock);
+#endif
 		return NULL;
 	}
 	if (debug > 2) {
@@ -242,12 +245,10 @@ static tenant_entry *get_tenant(uint32_t tenant_id)
 	}
     te->tenant_id = tenant_id;
 	dlist_add(&tenant_list, &te->global_dle);
-#if USE_PTHREAD
 	tenant_entry_hold(te); //For return
 	tenant_entry_hold(te); //For tenant_list
-	pthread_mutex_unlock(&tenant_list_lock);
-#endif
 #if USE_PTHREAD
+	pthread_mutex_unlock(&tenant_list_lock);
 	printf("[%s] [tenant:%u] New tenant\n", thread_str, tenant_id);
 #else
 	printf("[tenant:%u] New tenant\n", tenant_id);
@@ -270,14 +271,12 @@ static int remove_client_from_tenant(udp_client *cl)
 		dlist_del(&tenant_list, &te->global_dle);
 #if USE_PTHREAD
 		pthread_mutex_unlock(&tenant_list_lock);
-		tenant_entry_release(te); //For tenant_list
 #endif
+		tenant_entry_release(te); //For tenant_list
 	}
 
-#if USE_PTHREAD
 	udp_client_release(cl); //For te->client_list
 	tenant_entry_release(te); //For cl->tenant
-#endif
 	return 0;
 }
 
@@ -314,10 +313,10 @@ static udp_client *get_client(uint32_t tenant_id, const struct sockaddr *addr, s
 #if USE_PTHREAD
 	pthread_rwlock_init(&cl->vlan_list_lock, NULL);
 	pthread_mutex_init(&cl->mac_list_lock, NULL);
+#endif
 	tenant_entry_hold(te); //For cl->tenant
 	udp_client_hold(cl); //For te->client_list
 	udp_client_hold(cl); //For return
-#endif
     log_client(cl, "New client");
     return cl;
 }
@@ -351,14 +350,14 @@ static vlan_entry *get_vlan(udp_client *cl, uint16_t vlan_id)
 		vl->vlan_id = vlan_id;
 #if USE_PTHREAD
 		pthread_mutex_init(&vl->mac_list_lock, NULL);
-		vlan_entry_hold(vl); //cl->vlan_list
 #endif
+		vlan_entry_hold(vl); //cl->vlan_list
 		dlist_add(&cl->vlan_list, &vl->client_dle);
 		cl->vlan_count++;
 		vlan_bitmap_set(&cl->vlans, vlan_id);
 	}
-#if USE_PTHREAD
 	vlan_entry_hold(vl); //local/return
+#if USE_PTHREAD
 	pthread_rwlock_unlock(&cl->vlan_list_lock);
 #endif
 	return vl;
@@ -387,30 +386,27 @@ static void remove_mac_from_client(udp_client *cl, mac_entry *me)
 	dlist_del(&cl->mac_list, &me->client_dle);
 	me->client = NULL;
 	cl->mac_count--;
+
 #if USE_PTHREAD
 	pthread_mutex_unlock(&vl->mac_list_lock);
 	pthread_mutex_unlock(&cl->mac_list_lock);
+#endif
+
 	mac_entry_release(me); //vl->mac_list
 	mac_entry_release(me); //cl->mac_list
 	//udp_client_release(cl); //me->client -- defer to end for free safety
 	//vlan_entry_release(vl); //me->vlan -- defer to end for free safety
-#endif
-
 	if (vl->mac_count == 0 && !vl->persistent) {
 		dlist_del(&cl->vlan_list, &vl->client_dle);
-#if USE_PTHREAD
 		vlan_entry_release(vl); //cl->vlan_list
-#else
-		free(vl);
-#endif
 		vlan_bitmap_clear(&cl->vlans, vl->vlan_id);
 		cl->vlan_count--;
 	}
 #if USE_PTHREAD
 	pthread_rwlock_unlock(&cl->vlan_list_lock);
+#endif
 	udp_client_release(cl); //me->client
 	vlan_entry_release(vl); //me->vlan
-#endif
 }
 
 int add_mac_to_client(udp_client *cl, mac_entry *me)
@@ -428,9 +424,7 @@ int add_mac_to_client(udp_client *cl, mac_entry *me)
 	}
 
 	if (vl->mac_count >= MAX_MACS_PER_VLAN) {
-#if USE_PTHREAD
 		vlan_entry_release(vl);
-#endif
 		return -1;
 	}
 
@@ -448,12 +442,12 @@ int add_mac_to_client(udp_client *cl, mac_entry *me)
 #if USE_PTHREAD
 	pthread_mutex_unlock(&vl->mac_list_lock);
 	pthread_mutex_unlock(&cl->mac_list_lock);
+#endif
 	udp_client_hold(cl); //me->client
 	vlan_entry_hold(vl); //me->vlan
 	mac_entry_hold(me); //cl->mac_list
 	mac_entry_hold(me); //vl->mac_list
 	vlan_entry_release(vl); //local
-#endif
 	return 0;
 }
 
@@ -490,9 +484,7 @@ static mac_entry *get_mac(const uint8_t *mac,
 		free(me);
 		return NULL;
 	}
-#if USE_PTHREAD
 	mac_entry_hold(me); //For return
-#endif
     SAFE_HASH_ADD_KEYPTR(hh, macs, &me->key, sizeof(me->key), me);
     if (debug) {
 		log_mac(me, "Learned");
@@ -648,9 +640,7 @@ read:
 				log_client(src, "Cannot forward to self");
 				client_drop(src, n);
 				mac_drop(me, n);
-#if USE_PTHREAD
 				mac_entry_release(dmac);
-#endif				
 				goto exit;
 			}
 			if (debug > 1) {
@@ -669,9 +659,7 @@ read:
 					mac_drop(me, n);
 				}
 			}
-#if USE_PTHREAD
 	        mac_entry_release(dmac);
-#endif
         } else {
 			if (debug > 1) {
 				log_client(src, "Unknown destination MAC %02x:%02x:%02x:%02x:%02x:%02x vlan %u",
@@ -684,14 +672,12 @@ read:
 		}
     }
 exit:
-#if USE_PTHREAD
 	if (me) {
 		mac_entry_release(me);
 	}
 	if (src) {
 		udp_client_release(src);
 	}
-#endif
 }
 
 static void
@@ -795,9 +781,7 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 				// Avoid lock inversion, delete client outside of MAC loop
 				check_clients = true;
 			}
-#if USE_PTHREAD
 			mac_entry_release(me);
-#endif
         }
     }
 	SAFE_HASH_ITER_DONE(hh, macs, me, mt);
@@ -810,9 +794,7 @@ mac_age_cb(evutil_socket_t fd UNUSED, short what UNUSED, void *arg UNUSED)
 				log_client(cl, "Aged out");
 				HASH_DEL(clients, cl);
 				remove_client_from_tenant(cl);
-#if USE_PTHREAD
 				udp_client_release(cl);
-#endif
 			}
 		}
 		SAFE_HASH_ITER_DONE(hh, clients, cl, ct);
@@ -960,11 +942,9 @@ static void load_clients_from_json_config(const char *cfg_file)
                 if (json_is_integer(vlan)) {
                     uint16_t vid_i = (uint16_t)json_integer_value(vlan);
                     vlan_entry *vl UNUSED = add_persistent_vlan_to_client(cl, vid_i);
-#if USE_PTHREAD
 					if (vl) {
 						vlan_entry_release(vl);
 					}
-#endif
                 } else if (json_is_object(vlan)) {
 					json_t *vid = json_object_get(vlan, "id");
 					json_t *macs = json_object_get(vlan, "macs");
@@ -978,29 +958,21 @@ static void load_clients_from_json_config(const char *cfg_file)
 						json_t *mac;
 						json_array_foreach(macs, k, mac) {
 							mac_entry *me UNUSED = add_persistent_mac_to_vlan(cl, vl, json_string_value(mac));
-#if USE_PTHREAD
 							if (me) {
 								mac_entry_release(me);
 							}
-#endif
 						}
-#if USE_PTHREAD
 						vlan_entry_release(vl);
-#endif
 					}
 				}
             }
         } else {
 			vlan_entry *vl UNUSED = add_persistent_vlan_to_client(cl, 0);
-#if USE_PTHREAD
 			if (vl) {
 				vlan_entry_release(vl);
 			}
-#endif
 		}
-#if USE_PTHREAD
 	    udp_client_release(cl);
-#endif
     }
     json_decref(root);
 }
@@ -1221,9 +1193,7 @@ parse_client_spec(const char *spec_str)
 	vlan_entry *vl = add_persistent_vlan_to_client(cl, vlan);
 	if (!vl) {
 		fprintf(stderr, "Failed to add VLAN %u to client %s:%d\n", vlan, ipbuf, port);
-#if USE_PTHREAD
 		udp_client_release(cl);
-#endif
 		return -1;
 	}
 
@@ -1231,20 +1201,14 @@ parse_client_spec(const char *spec_str)
 		mac_entry *me = add_persistent_mac_to_vlan(cl, vl, macbuf);
 		if (!me) {
 			fprintf(stderr, "Invalid MAC address in client spec: %s\n", macbuf);
-#if USE_PTHREAD
 			vlan_entry_release(vl);
 			udp_client_release(cl);
-#endif
 			return -1;
 		}
-#if USE_PTHREAD
 		mac_entry_release(me);
-#endif
 	}
-#if USE_PTHREAD
 	vlan_entry_release(vl);
     udp_client_release(cl);
-#endif
 
     return 0;
 }
@@ -1440,9 +1404,7 @@ int main(int argc, char **argv)
 		remove_mac_from_client(me->client, me);
 		// Don't use SAFE_HASH_DELETE, already in lock
 		HASH_DEL(macs, me);
-#if USE_PTHREAD
 		mac_entry_release(me);
-#endif
 	}
 	SAFE_HASH_ITER_DONE(hh, macs, me, mt);
 	HASH_CLEAR(hh, macs);
@@ -1456,11 +1418,7 @@ int main(int argc, char **argv)
 			vlan_entry *vl = container_of(dle, vlan_entry, client_dle);
 			dlist_entry *next = dle->next;
 			dlist_del(&c->vlan_list, dle);
-#if USE_PTHREAD
 			vlan_entry_release(vl);
-#else
-			free(vl);
-#endif
 			dle = next;
 		}
 #if USE_PTHREAD
@@ -1469,9 +1427,7 @@ int main(int argc, char **argv)
 		// Don't use SAFE_HASH_DELETE, already in lock
 		HASH_DEL(clients, c);
 		remove_client_from_tenant(c);
-#if USE_PTHREAD
 		udp_client_release(c);
-#endif
 	}
 	SAFE_HASH_ITER_DONE(hh, clients, c, ct);
 	HASH_CLEAR(hh, clients);
