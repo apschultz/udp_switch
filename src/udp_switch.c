@@ -25,6 +25,8 @@
 #include <jansson.h>
 #include <libgen.h>
 #include <uthash.h>
+#include "dlist.h"
+#include "vlan_bitmap.h"
 
 #define USE_PTHREAD 1
 #if USE_PTHREAD
@@ -62,47 +64,6 @@ __thread char thread_str[16] = "-";
         const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)((char *)__mptr - offsetof(type,member));})
 
-typedef struct dlist_entry {
-	struct dlist_entry *prev;
-	struct dlist_entry *next;
-} dlist_entry;
-
-typedef struct dlist {
-	dlist_entry *head;
-	dlist_entry *tail;
-} dlist;
-
-static inline void dlist_add(dlist *dl, dlist_entry *e)
-{
-	if (dl->head == NULL) {
-		e->prev = NULL;
-		e->next = NULL;
-		dl->head = e;
-		dl->tail = e;
-	} else {
-		e->prev = dl->tail;
-		e->next = NULL;
-		dl->tail->next = e;
-		dl->tail = e;
-	}
-}
-
-static inline void dlist_del(dlist *dl, dlist_entry *e)
-{
-	if (dl->head == e) {
-		dl->head = e->next;
-	}
-	if (dl->tail == e) {
-		dl->tail = e->prev;
-	}
-	if (e->prev) {
-		e->prev->next = e->next;
-	}
-	if (e->next) {
-		e->next->prev = e->prev;
-	}
-	e->prev = e->next = NULL;
-}
 
 #define ETHER_ADDR_LEN 6
 typedef struct ether_header {
@@ -119,23 +80,6 @@ typedef struct vlan_header {
     uint16_t ether_type;     /* packet type ID field */
 	uint8_t  data[0];
 } __attribute__((packed)) vlan_header;
-#define VLAN_VID_MASK	0xfff
-
-#define VLAN_BITMAP_BITS_PER_WORD (64)
-#define VLAN_BITMAP_WORDS ((VLAN_VID_MASK + VLAN_BITMAP_BITS_PER_WORD-1)/VLAN_BITMAP_BITS_PER_WORD)
-typedef struct vlan_bitmap {
-  uint64_t bits[VLAN_BITMAP_WORDS];
-} vlan_bitmap;
-
-static inline void vlan_bitmap_set(vlan_bitmap *bm, uint16_t vlan_id) {
-  bm->bits[vlan_id/VLAN_BITMAP_BITS_PER_WORD] |= 1ULL << (vlan_id&(VLAN_BITMAP_BITS_PER_WORD-1));
-}
-static inline void vlan_bitmap_clear(vlan_bitmap *bm, uint16_t vlan_id) {
-  bm->bits[vlan_id/VLAN_BITMAP_BITS_PER_WORD] &= ~(1ULL << (vlan_id&(VLAN_BITMAP_BITS_PER_WORD-1)));
-}
-static inline int vlan_bitmap_test(vlan_bitmap *bm, uint16_t vlan_id) {
-  return (bm->bits[vlan_id/VLAN_BITMAP_BITS_PER_WORD] >> (vlan_id&(VLAN_BITMAP_BITS_PER_WORD-1))) & 1;
-}
 
 
 typedef struct tenant_entry {
