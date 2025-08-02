@@ -12,11 +12,12 @@
 
 #include "dlist.h"
 #include "vlan_bitmap.h"
-#include "safe_hash.h"
 
 #ifndef USE_PTHREAD
 #define USE_PTHREAD 1
 #endif
+
+#include "safe_hash.h"
 
 #if USE_PTHREAD
 #include <pthread.h>
