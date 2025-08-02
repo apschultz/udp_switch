@@ -2,6 +2,8 @@
  * UDP Ethernet switch in C using libevent bufferevents and uthash
  */
 
+#define USE_PTHREAD 1
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,13 +26,11 @@
 #include <event2/buffer.h>
 #include <jansson.h>
 #include <libgen.h>
-#include <uthash.h>
 #include "dlist.h"
 #include "vlan_bitmap.h"
+#include "safe_hash.h"
 
-#define USE_PTHREAD 1
 #if USE_PTHREAD
-#include <pthread.h>
 #include <event2/thread.h>
 #endif
 
@@ -228,84 +228,15 @@ static mac_entry  *macs    = NULL;
 
 #if USE_PTHREAD
 pthread_rwlock_t clients_lock = PTHREAD_RWLOCK_INITIALIZER;
-pthread_rwlock_t macs_lock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t macs_lock    = PTHREAD_RWLOCK_INITIALIZER;
+#endif
 
-#define type_hold(x)                              \
-    _Generic((x),                                 \
-        struct udp_client*: udp_client_hold,      \
-        struct mac_entry*: mac_entry_hold,        \
-        struct vlan_entry*: vlan_entry_hold       \
-    )(x)
-#define type_release(x)                           \
-    _Generic((x),                                 \
-        struct udp_client*: udp_client_release,   \
-        struct mac_entry*: mac_entry_release,     \
-        struct vlan_entry*: vlan_entry_release    \
-    )(x)
-
-#define _CAT(a,b)  a##b
-#define CAT(a,b)   _CAT(a,b)
-
-#define SAFE_HASH_ADD_KEYPTR(hh_name, head, key_ptr, key_len, item_ptr) \
-    do {                                                                \
-		pthread_rwlock_wrlock(&CAT(head,_lock));                        \
-		HASH_ADD_KEYPTR(hh_name, head, key_ptr, key_len, item_ptr);     \
-		if (item_ptr) {                                                 \
-			type_hold(item_ptr);                                        \
-		}                                                               \
-		pthread_rwlock_unlock(&CAT(head,_lock));                        \
-	} while(0)
-
-#define SAFE_HASH_FIND(hh_name, head, key_ptr, key_len, item_ptr)       \
-    do {                                                                \
-		pthread_rwlock_rdlock(&CAT(head,_lock));                        \
-		HASH_FIND(hh_name, head, key_ptr, key_len, item_ptr);           \
-		if (item_ptr) {                                                 \
-			type_hold(item_ptr);                                        \
-		}                                                               \
-		pthread_rwlock_unlock(&CAT(head,_lock));                        \
-	} while(0)
-
-#define SAFE_HASH_DEL(head, item_ptr)                                   \
-    do {                                                                \
-		pthread_rwlock_wrlock(&CAT(head,_lock));                        \
-		HASH_DEL(head, item_ptr);                                       \
-		if (item_ptr) {                                                 \
-			type_release(item_ptr);                                     \
-		}                                                               \
-		pthread_rwlock_unlock(&CAT(head,_lock));                        \
-	} while(0)
-#define SAFE_HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)           \
-    do {                                                                \
-		pthread_rwlock_rdlock(&CAT(head,_lock));                        \
-		HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)
-#define SAFE_HASH_ITER_WRITE(hh_name, head, item_ptr, tmp_item_ptr)     \
-    do {                                                                \
-		pthread_rwlock_wrlock(&CAT(head,_lock));                        \
-		HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)
-
-#define SAFE_HASH_ITER_DONE(hh_name, head, item_ptr, tmp_item_ptr)      \
-        pthread_rwlock_unlock(&CAT(head,_lock));                        \
-	} while(0)
-
+#if USE_PTHREAD
 #define ATOMIC_SET(x, val) __atomic_store_n (&(x), val, __ATOMIC_RELAXED)
 #define ATOMIC_ADD(x, val) __atomic_add_fetch (&(x), val, __ATOMIC_RELAXED)
-
 #else
-#define SAFE_HASH_ADD_KEYPTR HASH_ADD_KEYPTR
-#define SAFE_HASH_FIND HASH_FIND
-#define SAFE_HASH_DEL(head, item_ptr)                                   \
-    do {                                                                \
-		HASH_DEL(head, item_ptr);                                       \
-		free(item_ptr);                                                 \
-	} while(0)
-#define SAFE_HASH_ITER HASH_ITER
-#define SAFE_HASH_ITER_WRITE HASH_ITER
-#define SAFE_HASH_ITER_DONE(hh_name, head, item_ptr, tmp_item_ptr) {}
-
 #define ATOMIC_SET(x, val) x = val
 #define ATOMIC_ADD(x, val) x += val
-
 #endif
 
 /* -- Utility Functions for RX/TX Manipulation -- */
