@@ -10,6 +10,7 @@ struct vlan_entry;
 
 #if USE_PTHREAD
 #include <pthread.h>
+#endif
 
 #define type_hold(x)                              \
     _Generic((x),                                 \
@@ -28,61 +29,58 @@ struct vlan_entry;
 #define _CAT(a,b)  a##b
 #define CAT(a,b)   _CAT(a,b)
 
+#if USE_PTHREAD
+#define SAFE_WRLOCK pthread_rwlock_wrlock
+#define SAFE_RDLOCK pthread_rwlock_rdlock
+#define SAFE_UNLOCK pthread_rwlock_unlock
+#else
+#define SAFE_WRLOCK(lock)
+#define SAFE_RDLOCK(lock)
+#define SAFE_UNLOCK(lock)
+#endif
+
 #define SAFE_HASH_ADD_KEYPTR(hh_name, head, key_ptr, key_len, item_ptr) \
     do {                                                                \
-        pthread_rwlock_wrlock(&CAT(head,_lock));                        \
+        SAFE_WRLOCK(&CAT(head,_lock));                        \
         HASH_ADD_KEYPTR(hh_name, head, key_ptr, key_len, item_ptr);     \
         if (item_ptr) {                                                 \
             type_hold(item_ptr);                                        \
         }                                                               \
-        pthread_rwlock_unlock(&CAT(head,_lock));                        \
+        SAFE_UNLOCK(&CAT(head,_lock));                        \
     } while (0)
 
 #define SAFE_HASH_FIND(hh_name, head, key_ptr, key_len, item_ptr)       \
     do {                                                                \
-        pthread_rwlock_rdlock(&CAT(head,_lock));                        \
+        SAFE_RDLOCK(&CAT(head,_lock));                        \
         HASH_FIND(hh_name, head, key_ptr, key_len, item_ptr);           \
         if (item_ptr) {                                                 \
             type_hold(item_ptr);                                        \
         }                                                               \
-        pthread_rwlock_unlock(&CAT(head,_lock));                        \
+        SAFE_UNLOCK(&CAT(head,_lock));                        \
     } while (0)
 
 #define SAFE_HASH_DEL(head, item_ptr)                                   \
     do {                                                                \
-        pthread_rwlock_wrlock(&CAT(head,_lock));                        \
+        SAFE_WRLOCK(&CAT(head,_lock));                        \
         HASH_DEL(head, item_ptr);                                       \
         if (item_ptr) {                                                 \
             type_release(item_ptr);                                     \
         }                                                               \
-        pthread_rwlock_unlock(&CAT(head,_lock));                        \
+        SAFE_UNLOCK(&CAT(head,_lock));                        \
     } while (0)
 
 #define SAFE_HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)           \
     do {                                                                \
-        pthread_rwlock_rdlock(&CAT(head,_lock));                        \
+        SAFE_RDLOCK(&CAT(head,_lock));                        \
         HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)
 
 #define SAFE_HASH_ITER_WRITE(hh_name, head, item_ptr, tmp_item_ptr)     \
     do {                                                                \
-        pthread_rwlock_wrlock(&CAT(head,_lock));                        \
+        SAFE_WRLOCK(&CAT(head,_lock));                        \
         HASH_ITER(hh_name, head, item_ptr, tmp_item_ptr)
 
 #define SAFE_HASH_ITER_DONE(hh_name, head, item_ptr, tmp_item_ptr)      \
-        pthread_rwlock_unlock(&CAT(head,_lock));                        \
+        SAFE_UNLOCK(&CAT(head,_lock));                        \
     } while (0)
-
-#else
-#define SAFE_HASH_ADD_KEYPTR HASH_ADD_KEYPTR
-#define SAFE_HASH_FIND HASH_FIND
-#define SAFE_HASH_DEL(head, item_ptr)                                   \
-    do {                                                                \
-        HASH_DEL(head, item_ptr);                                       \
-        free(item_ptr);                                                 \
-    } while (0)
-#define SAFE_HASH_ITER HASH_ITER
-#define SAFE_HASH_ITER_WRITE HASH_ITER
-#define SAFE_HASH_ITER_DONE(hh_name, head, item_ptr, tmp_item_ptr) {}
-#endif
 
 #endif /* SAFE_HASH_H */
